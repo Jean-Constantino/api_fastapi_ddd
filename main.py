@@ -2,7 +2,9 @@ from fastapi import FastAPI, Depends, HTTPException
 from sqlmodel import SQLModel, Session, select
 from infrastructure.database import database
 from interface.api.users import router as users_router
-#from models.user import User  # Importando o modelo de usuário
+from domain.models.users import User  # Importando corretamente o modelo de usuário
+from typing import Optional
+from domain.repository.user_repository import UserRepository
 
 # Criar a aplicação FastAPI
 app = FastAPI(
@@ -50,6 +52,18 @@ def get_user_by_id(id: int, session: Session = Depends(get_session)):
     if not user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
     return user
+
+class SQLModelUserRepository(UserRepository):
+    def get_by_id(self, user_id: int) -> Optional[User]:
+        with Session(database.engine) as session:
+            return session.get(User, user_id)
+
+    def add(self, user: User) -> User:
+        with Session(database.engine) as session:
+            session.add(user)
+            session.commit()
+            session.refresh(user)
+            return user
 
 # Função para iniciar o servidor
 def start_server():
